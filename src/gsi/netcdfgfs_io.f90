@@ -31,7 +31,7 @@ module netcdfgfs_io
 !   machine:
 !
 ! NOTE: This module adds capability to read netCDF FV3 first guess files
-!       and to write netCDF FV3 analysis files using the ncio interface 
+!       and to write netCDF FV3 analysis files using the ncio interface
 !       Using this is controled by a namelist argument "use_gfs_ncio"
 !
 !
@@ -224,7 +224,7 @@ contains
           if (mype==0) write(*,*) 'calling general_read_gfsatm_allhydro_nc', it
           call general_read_gfsatm_allhydro_nc(grd_t,sp_a,filename,.true.,.true.,.true.,&
               atm_bundle,istatus) ! this loads cloud and precip
-          if (mype==0) write(*,*) 'done with general_read_gfsatm_allhydro_nc', it 
+          if (mype==0) write(*,*) 'done with general_read_gfsatm_allhydro_nc', it
        else
           if (mype==0) write(*,*) 'calling general_read_gfsatm_nc'
           call general_read_gfsatm_nc(grd_t,sp_a,filename,.true.,.true.,.true.,&
@@ -264,7 +264,7 @@ contains
                           associated(ges_ql_it)  .and.&
                           associated(ges_ni_it)  .and.&
                           associated(ges_nr_it)  .and.&
-                          associated(ges_qi_it)  .and.& 
+                          associated(ges_qi_it)  .and.&
                           associated(ges_tv_it)
 !         call set_cloud_lower_bound(ges_cwmr_it)
           if (mype==0) write(6,*)'READ_GFS_NETCDF: l_cld_derived = ', l_cld_derived
@@ -505,7 +505,7 @@ contains
     use general_sub2grid_mod, only: sub2grid_info
     use mpimod, only: npe,mpi_comm_world,ierror,mpi_rtype,mype
     use module_ncio, only: Dataset, Variable, Dimension, open_dataset,&
-                quantize_data,close_dataset, get_dim, read_vardata, get_idate_from_time_units 
+                quantize_data,close_dataset, get_dim, read_vardata, get_idate_from_time_units
     use egrid2agrid_mod,only: g_egrid2agrid,g_create_egrid2agrid,egrid2agrid_parm,destroy_egrid2agrid
     use constants, only: two,pi,half,deg2rad
     implicit none
@@ -575,7 +575,7 @@ contains
       ncdim = get_dim(atmges, 'grid_xt'); lonb = ncdim%len
       ncdim = get_dim(atmges, 'grid_yt'); latb = ncdim%len
       ncdim = get_dim(atmges, 'pfull'); levs = ncdim%len
-      
+
       ! get time information
       idate = get_idate_from_time_units(atmges)
       odate(1) = idate(4)  !hour
@@ -931,7 +931,7 @@ contains
 
   subroutine read_sfc_(sfct,soil_moi,sno,soil_temp,veg_frac,fact10,sfc_rough, &
                            veg_type,soil_type,terrain,isli,use_sfc_any, &
-                           tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d) 
+                           tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d)
 !$$$  subprogram documentation block
 !                .      .    .                                       .
 ! subprogram:    read_sfc_     read netCDF sfc hist file
@@ -941,7 +941,7 @@ contains
 !
 ! program history log:
 !   2019-09-23 Martin    Initial version.
-!  
+!
 !   input argument list:
 !     use_sfc_any - true if any processor uses extra surface fields
 !
@@ -960,7 +960,7 @@ contains
 !     tref      - optional, oceanic foundation temperature
 !     dt_cool   - optional, sub-layer cooling amount at sub-skin layer
 !     z_c       - optional, depth of sub-layer cooling layer
-!     dt_warm   - optional, diurnal warming amount at sea surface 
+!     dt_warm   - optional, diurnal warming amount at sea surface
 !     z_w       - optional, depth of diurnal warming layer
 !     c_0       - optional, coefficient to calculate d(Tz)/d(tr) in dimensionless
 !     c_d       - optional, coefficient to calculate d(Tz)/d(tr) in m^-1
@@ -978,7 +978,7 @@ contains
     use guess_grids, only: nfldsfc,ifilesfc
     use constants, only: zero,two
     use module_ncio, only: Dataset, Variable, Dimension, open_dataset,&
-                           close_dataset, get_dim, read_vardata, get_idate_from_time_units 
+                           close_dataset, get_dim, read_vardata, get_idate_from_time_units
     implicit none
 
 !   Declare passed variables
@@ -987,7 +987,7 @@ contains
     real(r_single),  dimension(nlat_sfc,nlon_sfc),         intent(out) :: veg_type,soil_type,terrain
     integer(i_kind), dimension(nlat_sfc,nlon_sfc),         intent(out) :: isli
     real(r_single),  optional, dimension(nlat_sfc,nlon_sfc,nfldsfc), intent(out) :: tref,dt_cool,z_c,dt_warm,z_w,c_0,c_d,w_0,w_d
-                                
+
 !   Declare local parameters
     integer(i_kind), parameter :: nsfc_all=11
     integer(i_kind),dimension(6):: idate
@@ -1000,6 +1000,7 @@ contains
     integer(i_kind) :: lonb, latb
     real(r_single),allocatable, dimension(:)  :: fhour
     real(r_single), allocatable, dimension(:,:) :: work,outtmp
+    real(r_single), allocatable, dimension(:,:,:) :: work_soil
     type(Dataset) :: sfcges
     type(Dimension) :: ncdim
 !-----------------------------------------------------------------------------
@@ -1040,6 +1041,8 @@ contains
 !
        allocate(work(lonb,latb))
        work    = zero
+       allocate(work_soil(lonb,latb,4))
+       work_soil = zero
 
        if(it == 1)then
          nsfc=nsfc_all
@@ -1058,7 +1061,8 @@ contains
           elseif(n == 2 .and. use_sfc_any) then          ! soil moisture
 
 !            smc/soilw
-             call read_vardata(sfcges, 'soilw1', work)
+             call read_vardata(sfcges, 'soilw1', work_soil)
+             work = work_soil(:,:,1)
              call tran_gfsncsfc(work,soil_moi(1,1,it),lonb,latb)
 
           elseif(n == 3) then                            ! snow depth
@@ -1069,7 +1073,8 @@ contains
           elseif(n == 4 .and. use_sfc_any) then          ! soil temperature
 
 !            stc/tmp
-             call read_vardata(sfcges, 'soilt1', work)
+             call read_vardata(sfcges, 'soilt1', work_soil)
+             work = work_soil(:,:,1)
              call tran_gfsncsfc(work,soil_temp(1,1,it),lonb,latb)
 
           elseif(n == 5 .and. use_sfc_any) then          ! vegetation cover
@@ -1125,7 +1130,7 @@ contains
 !      End of loop over data records
        enddo
 
-       if( present(tref) ) then                         
+       if( present(tref) ) then
           if ( mype == 0 ) write(6,*) ' read 9 optional NSST variables '
 
           call read_vardata(sfcges, 'tref', work)
@@ -1142,7 +1147,7 @@ contains
 
           call read_vardata(sfcges, 'xz', work)
           call tran_gfsncsfc(work,z_w(1,1,it),lonb,latb)
- 
+
           call read_vardata(sfcges, 'c0', work)
           call tran_gfsncsfc(work,c_0(1,1,it),lonb,latb)
 
@@ -1210,12 +1215,12 @@ contains
 !     tref      - oceanic foundation temperature
 !     dt_cool   - optional, sub-layer cooling amount at sub-skin layer
 !     z_c       - optional, depth of sub-layer cooling layer
-!     dt_warm   - optional, diurnal warming amount at sea surface 
+!     dt_warm   - optional, diurnal warming amount at sea surface
 !     z_w       - optional, depth of diurnal warming layer
-!     c_0       - optional, coefficient to calculate d(Tz)/d(tf) 
+!     c_0       - optional, coefficient to calculate d(Tz)/d(tf)
 !     c_d       - optional, coefficient to calculate d(Tz)/d(tf)
-!     w_0       - optional, coefficient to calculate d(Tz)/d(tf) 
-!     w_d       - optional, coefficient to calculate d(Tz)/d(tf) 
+!     w_0       - optional, coefficient to calculate d(Tz)/d(tf)
+!     w_d       - optional, coefficient to calculate d(Tz)/d(tf)
 !
 ! attributes:
 !   language: f90
@@ -1316,7 +1321,7 @@ contains
     use gridmod, only: nlat,nlon
     use constants, only: zero
     use module_ncio, only: Dataset, Variable, Dimension, open_dataset,&
-                           close_dataset, get_dim, read_vardata, get_idate_from_time_units 
+                           close_dataset, get_dim, read_vardata, get_idate_from_time_units
     implicit none
 
 !   Declare passed variables
@@ -1465,10 +1470,10 @@ contains
 !   z_c      (:,:)                ! depth of sub-layer cooling layer
 !   dt_warm  (:,:)                ! diurnal warming amount at sea surface (skin layer)
 !   z_w      (:,:)                ! depth of diurnal warming layer
-!   c_0      (:,:)                ! coefficient to calculate d(Tz)/d(tr) 
-!   c_d      (:,:)                ! coefficient to calculate d(Tz)/d(tr) 
-!   w_0      (:,:)                ! coefficient to calculate d(Tz)/d(tr) 
-!   w_d      (:,:)                ! coefficient to calculate d(Tz)/d(tr) 
+!   c_0      (:,:)                ! coefficient to calculate d(Tz)/d(tr)
+!   c_d      (:,:)                ! coefficient to calculate d(Tz)/d(tr)
+!   w_0      (:,:)                ! coefficient to calculate d(Tz)/d(tr)
+!   w_d      (:,:)                ! coefficient to calculate d(Tz)/d(tr)
 !
 ! attributes:
 !   language: f90
@@ -1480,7 +1485,7 @@ contains
     use constants, only: zero,two
     use guess_grids, only: nfldnst,ifilenst
     use module_ncio, only: Dataset, Variable, Dimension, open_dataset,&
-                           close_dataset, get_dim, read_vardata, get_idate_from_time_units 
+                           close_dataset, get_dim, read_vardata, get_idate_from_time_units
     implicit none
 
 !   Declare passed variables
@@ -1826,7 +1831,7 @@ contains
           write(6,*) trim(my_name),': problem in data dimension background levs = ',levs,' nsig = ',grd%nsig
           call stop2(103)
        endif
-       
+
        ! get time information
        idate = get_idate_from_time_units(atmges)
        call read_vardata(atmges, 'time', fhour) ! might need to change this to attribute later
@@ -1908,7 +1913,7 @@ contains
     enddo
 
     sub_dza = sub_dza - sub_dzb !sub_dza is increment
-    
+
     ! Strip off boundary points from subdomains
     call strip(sub_ps  ,psm)
     call strip(sub_tv  ,tvsm  ,grd%nsig)
@@ -2055,7 +2060,7 @@ contains
     if (mype==mype_out) then
        if (has_attr(atmges, 'nbits', 'ugrd')) then
          call read_attribute(atmges, 'nbits', nbits, 'ugrd')
-         values_3d_tmp = ug3d 
+         values_3d_tmp = ug3d
          call quantize_data(values_3d_tmp, ug3d, nbits, compress_err)
          call write_attribute(atmanl,&
          'max_abs_compression_error',compress_err,'ugrd')
@@ -2065,7 +2070,7 @@ contains
        ! Meridional wind
        if (has_attr(atmges, 'nbits', 'vgrd')) then
          call read_attribute(atmges, 'nbits', nbits, 'vgrd')
-         values_3d_tmp = vg3d 
+         values_3d_tmp = vg3d
          call quantize_data(values_3d_tmp, vg3d, nbits, compress_err)
          call write_attribute(atmanl,&
          'max_abs_compression_error',compress_err,'vgrd')
@@ -2112,7 +2117,7 @@ contains
     if (mype==mype_out) then
        if (has_attr(atmges, 'nbits', 'tmp')) then
          call read_attribute(atmges, 'nbits', nbits, 'tmp')
-         values_3d_tmp = values_3d 
+         values_3d_tmp = values_3d
          call quantize_data(values_3d_tmp, values_3d, nbits, compress_err)
          call write_attribute(atmanl,&
          'max_abs_compression_error',compress_err,'tmp')
@@ -2158,7 +2163,7 @@ contains
     if (mype==mype_out) then
        if (has_attr(atmges, 'nbits', 'spfh')) then
          call read_attribute(atmges, 'nbits', nbits, 'spfh')
-         values_3d_tmp = values_3d 
+         values_3d_tmp = values_3d
          call quantize_data(values_3d_tmp, values_3d, nbits, compress_err)
          call write_attribute(atmanl,&
          'max_abs_compression_error',compress_err,'spfh')
@@ -2204,7 +2209,7 @@ contains
     if (mype==mype_out) then
        if (has_attr(atmges, 'nbits', 'o3mr')) then
          call read_attribute(atmges, 'nbits', nbits, 'o3mr')
-         values_3d_tmp = values_3d 
+         values_3d_tmp = values_3d
          call quantize_data(values_3d_tmp, values_3d, nbits, compress_err)
          call write_attribute(atmanl,&
          'max_abs_compression_error',compress_err,'o3mr')
@@ -2274,7 +2279,7 @@ contains
        if (mype==mype_out) then
           if (has_attr(atmges, 'nbits', 'clwmr')) then
             call read_attribute(atmges, 'nbits', nbits, 'clwmr')
-            values_3d_tmp = ug3d 
+            values_3d_tmp = ug3d
             call quantize_data(values_3d_tmp, ug3d, nbits, compress_err)
             call write_attribute(atmanl,&
             'max_abs_compression_error',compress_err,'clwmr')
@@ -2283,7 +2288,7 @@ contains
           if (iret /= 0) call error_msg(trim(my_name),trim(filename),'clwmr','write',istop,iret)
           if (has_attr(atmges, 'nbits', 'icmr')) then
             call read_attribute(atmges, 'nbits', nbits, 'icmr')
-            values_3d_tmp = vg3d 
+            values_3d_tmp = vg3d
             call quantize_data(values_3d_tmp, vg3d, nbits, compress_err)
             call write_attribute(atmanl,&
             'max_abs_compression_error',compress_err,'icmr')
@@ -2307,7 +2312,7 @@ contains
             work1,grd%ijn,grd%displs_g,mpi_rtype,&
             mype_out,mpi_comm_world,ierror)
        if (mype == mype_out) then
-          if (has_var(atmges,'delz')) then 
+          if (has_var(atmges,'delz')) then
           if(diff_res)then
              grid_b=values_3d(:,:,kr)
              do kk=1,grd%iglobal
@@ -2331,10 +2336,10 @@ contains
     end do
     if (mype==mype_out) then
        ! if delz in guess file, write to analysis file.
-       if (has_var(atmges,'delz')) then 
+       if (has_var(atmges,'delz')) then
           if (has_attr(atmges, 'nbits', 'delz')) then
             call read_attribute(atmges, 'nbits', nbits, 'delz')
-            values_3d_tmp = values_3d 
+            values_3d_tmp = values_3d
             call quantize_data(values_3d_tmp, values_3d, nbits, compress_err)
             call write_attribute(atmanl,&
             'max_abs_compression_error',compress_err,'delz')
@@ -2343,7 +2348,7 @@ contains
           if (iret /= 0) call error_msg(trim(my_name),trim(filename),'delz','write',istop,iret)
        endif
     endif
-    
+
 !
 ! Deallocate local array
 !
@@ -2428,7 +2433,7 @@ contains
     use netcdf, only: nf90_max_name
     use module_ncio, only: open_dataset, close_dataset, Dimension, Dataset,&
                            get_dim, create_dataset, write_vardata, read_vardata,&
-                           get_time_units_from_idate, write_attribute  
+                           get_time_units_from_idate, write_attribute
 
 
     implicit none
@@ -2511,7 +2516,7 @@ contains
 !
 !      First copy entire data from fname_ges to filename, then do selective update
 !
-       sfcanl = create_dataset(filename, sfcges, copy_vardata=.true.) 
+       sfcanl = create_dataset(filename, sfcges, copy_vardata=.true.)
 !
 !      Replace header record date with analysis time from iadate
 !
@@ -2638,7 +2643,7 @@ contains
 
     use module_ncio, only: open_dataset, close_dataset, Dimension, Dataset,&
                            get_dim, create_dataset, write_vardata, read_vardata,&
-                           get_time_units_from_idate, write_attribute  
+                           get_time_units_from_idate, write_attribute
     use netcdf, only: nf90_max_name
 
     implicit none
@@ -2906,7 +2911,7 @@ contains
 ! c_d
        call read_vardata(nstges, 'cd', c_d)
 ! w_0
-       call read_vardata(nstges, 'w0', w_0) 
+       call read_vardata(nstges, 'w0', w_0)
 ! w_d
        call read_vardata(nstges, 'wd', w_d)
 ! tref
@@ -3015,7 +3020,7 @@ contains
 !
 !      update tsea record in sfcanl
 !
-       call write_vardata(sfcanl, 'tmpsfc', tsea) 
+       call write_vardata(sfcanl, 'tmpsfc', tsea)
        write(6,100) fname_sfcanl,lonb,latb,houra,iadate(1:4)
 100    format(' WRITE_GFSNCIO_SFC_NST:  update tsea in ',a6,2i6,1x,f4.1,4(i4,1x))
 !
