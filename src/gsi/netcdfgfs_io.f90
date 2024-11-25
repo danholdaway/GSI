@@ -1061,7 +1061,7 @@ contains
           elseif(n == 2 .and. use_sfc_any) then          ! soil moisture
 
 !            smc/soilw
-             call read_vardata(sfcges, 'soilw1', work_soil)
+             call read_vardata(sfcges, 'soilw', work_soil)
              work = work_soil(:,:,1)
              call tran_gfsncsfc(work,soil_moi(1,1,it),lonb,latb)
 
@@ -1073,7 +1073,7 @@ contains
           elseif(n == 4 .and. use_sfc_any) then          ! soil temperature
 
 !            stc/tmp
-             call read_vardata(sfcges, 'soilt1', work_soil)
+             call read_vardata(sfcges, 'soilt', work_soil)
              work = work_soil(:,:,1)
              call tran_gfsncsfc(work,soil_temp(1,1,it),lonb,latb)
 
